@@ -11,7 +11,7 @@ const listingSchema = z.object({
   sellerName: z.string().min(1),
   sellerPhone: z.string().optional(),
   sellerWhatsApp: z.string().optional(),
-  categoryFields: z.record(z.string()),
+  categoryFields: z.record(z.string(), z.string()),
   images: z.array(z.string()).optional(),
 });
 

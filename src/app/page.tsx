@@ -649,27 +649,23 @@ function KasuwaMarket() {
   const openCategory = useCallback((category: CategoryChat) => {
     setActiveCategory(category);
     setShowSidebar(false);
-
-    // Initialize chat if empty
-    if (!chatMessages[category.id] || chatMessages[category.id].length === 0) {
-      const products = getProductsByCategory(category.id);
-      const productCards = products.map(productToCardData);
-
-      const welcomeMsg: ChatMessage = {
-        id: `welcome-${category.id}`,
-        role: "mai",
-        content: `${getTimeGreeting()} Welcome to ${category.icon} ${category.name}!\n\n${category.description}\n\n${products.length > 0 ? `I have ${products.length} item${products.length > 1 ? "s" : ""} ready for you. Browse below or ask me anything!` : "The stall is set up. Check back soon for new items!"}`,
-        products: productCards,
-        actions: products.length > 0 ? ["haggle", "community_deal"] : [],
-        timestamp: Date.now(),
-      };
-
-      setChatMessages((prev) => ({
-        ...prev,
-        [category.id]: [welcomeMsg],
-      }));
-    }
-  }, [chatMessages]);
+    setChatMessages((prev) => {
+      if (!prev[category.id] || prev[category.id].length === 0) {
+        const products = getProductsByCategory(category.id);
+        const productCards = products.map(productToCardData);
+        const welcomeMsg: ChatMessage = {
+          id: `welcome-${category.id}`,
+          role: "mai",
+          content: `${getTimeGreeting()} Welcome to ${category.icon} ${category.name}!\n\n${category.description}\n\n${products.length > 0 ? `I have ${products.length} item${products.length > 1 ? "s" : ""} ready for you. Browse below or ask me anything!` : "The stall is set up. Check back soon for new items!"}`,
+          products: productCards,
+          actions: products.length > 0 ? ["haggle", "community_deal"] : [],
+          timestamp: Date.now(),
+        };
+        return { ...prev, [category.id]: [welcomeMsg] };
+      }
+      return prev;
+    });
+  }, []);
 
   // ── Send message ──
   const sendMessage = useCallback(
