@@ -146,7 +146,7 @@ function buildCategoryChats(): CategoryChat[] {
       description: CATEGORY_DESCRIPTIONS[catId] || "",
       lastMessage: greetings[i % greetings.length],
       lastTime: times[i % times.length],
-      unread: i < 3 ? (i + 1) : 0,
+      unread: i < 3 ? Math.floor(Math.random() * 3) + 1 : 0,
       online: i < 6,
       messages: [],
       productCount: products.length,
@@ -568,23 +568,14 @@ function ProductDetailPanel({
             >
               <Phone className="size-3.5" />Call Seller
             </a>
-            {seller.whatsapp ? (
-              <a
-                href={`https://wa.me/${seller.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hello, I saw ${product.name} (${product.priceFormatted}) on KASUWA 2.0. Is it still available?`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 bg-[rgba(45,143,78,0.15)] border border-[rgba(45,143,78,0.2)] text-[var(--kente-green-bright)] hover:bg-[rgba(45,143,78,0.2)] transition-all"
-              >
-                <MessageCircle className="size-3.5" />WhatsApp
-              </a>
-            ) : (
-              <a
-                href={`tel:${seller.phone.replace(/[^0-9+]/g, "")}`}
-                className="flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 bg-[rgba(45,143,78,0.15)] border border-[rgba(45,143,78,0.2)] text-[var(--kente-green-bright)] hover:bg-[rgba(45,143,78,0.2)] transition-all"
-              >
-                <Phone className="size-3.5" />Call Seller
-              </a>
-            )}
+            <a
+              href={`https://wa.me/${seller.whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hello, I saw ${product.name} (${product.priceFormatted}) on KASUWA 2.0. Is it still available?`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 bg-[rgba(45,143,78,0.15)] border border-[rgba(45,143,78,0.2)] text-[var(--kente-green-bright)] hover:bg-[rgba(45,143,78,0.2)] transition-all"
+            >
+              <MessageCircle className="size-3.5" />WhatsApp
+            </a>
           </div>
         )}
       </div>
@@ -627,7 +618,6 @@ function KasuwaMarket() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatMessagesRef = useRef<Record<string, ChatMessage[]>>({});
 
   // ── Check for email confirmation / auth error on mount ──
   useEffect(() => {
@@ -649,11 +639,6 @@ function KasuwaMarket() {
       window.history.replaceState({}, "", url.pathname);
     }
   }, [searchParams]);
-
-  // ── Keep messages ref in sync ──
-  useEffect(() => {
-    chatMessagesRef.current = chatMessages;
-  }, [chatMessages]);
 
   // ── Auto-scroll ──
   useEffect(() => {
@@ -705,7 +690,7 @@ function KasuwaMarket() {
       setIsTyping(true);
 
       try {
-        const history = chatMessagesRef.current[categoryId] || [];
+        const history = chatMessages[categoryId] || [];
         const conversationHistory = history.map((m) => ({
           role: m.role === "mai" ? "assistant" : m.role === "user" ? "user" : "system",
           content: m.content,
@@ -724,38 +709,10 @@ function KasuwaMarket() {
           content: data.message || "The market is quiet right now.",
           products: (data.products || []).map((p: Record<string, unknown>) => {
             const raw = p.product || p;
-            if (!raw || typeof raw !== 'object' || !('id' in raw)) return null;
-            // The API returns flattened ProductCardData format, not nested Product format
-            // Check if it's already flattened (has haggleMin) or nested (has haggleRange)
-            if ('haggleMin' in raw) {
-              // Already flattened from API - use directly
-              const flat = raw as Record<string, unknown>;
-              return {
-                id: flat.id as string,
-                name: flat.name as string,
-                category: flat.category as string,
-                categoryLabel: (flat.categoryLabel as string) || CATEGORY_LABELS[(flat.category as string)] || (flat.category as string),
-                categoryIcon: (flat.categoryIcon as string) || CATEGORY_ICONS[(flat.category as string)] || "🏪",
-                subcategory: (flat.subcategory as string) || "",
-                price: flat.price as number,
-                priceFormatted: (flat.priceFormatted as string) || formatPrice(flat.price as number),
-                condition: (flat.condition as string) || "",
-                state: (flat.state as string) || "",
-                seller: (flat.seller as string) || "",
-                sellerId: (flat.sellerId as string) || "",
-                image: (flat.image as string) || "",
-                description: (flat.description as string) || "",
-                specs: (flat.specs as Record<string, string>) || {},
-                negotiable: (flat.negotiable as boolean) || false,
-                haggleMin: (flat.haggleMin as number) || 0,
-                haggleMinFormatted: (flat.haggleMinFormatted as string) || formatPrice(0),
-                communityDeal: (flat.communityDeal as ProductCardData['communityDeal']) || null,
-                postedAt: (flat.postedAt as string) || "",
-                views: (flat.views as number) || 0,
-              } as ProductCardData;
+            if (raw && typeof raw === "object" && "id" in raw) {
+              return productToCardData(raw as unknown as Product);
             }
-            // Nested Product format - use productToCardData
-            return productToCardData(raw as unknown as Product);
+            return null;
           }).filter(Boolean),
           actions: data.actions || [],
           timestamp: Date.now(),
@@ -779,7 +736,7 @@ function KasuwaMarket() {
         setIsTyping(false);
       }
     },
-    [inputValue, activeCategory]
+    [inputValue, activeCategory, chatMessages]
   );
 
   // ── Filtered categories ──

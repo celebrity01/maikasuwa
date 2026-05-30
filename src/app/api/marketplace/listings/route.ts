@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
     const client = createServerClient();
     const url = new URL(request.url);
     const category = url.searchParams.get('category');
-    const limit = parseInt(url.searchParams.get('limit') || '20');
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '20') || 20));
+    const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0') || 0);
 
     let query = client
       .from('listings')
